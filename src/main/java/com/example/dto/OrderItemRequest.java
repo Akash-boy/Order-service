@@ -1,19 +1,22 @@
 package com.example.dto;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
 
 @Data
-@AllArgsConstructor
+@Builder
 @NoArgsConstructor
-
+@AllArgsConstructor
 public class OrderItemRequest {
-    @NonNull
+
+    @NotNull(message = "Product ID is required")
     private Long productId;
-    @NonNull
+
+    @NotNull(message = "Quantity is required")
+    @Positive(message = "Quantity must be positive")
     private Integer quantity;
-
-
 }

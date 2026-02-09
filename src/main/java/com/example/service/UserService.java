@@ -34,6 +34,8 @@ public class UserService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword())) // TODO: Hash password in production
+                .address(request.getAddress())
+                .phoneNumber(request.getPhoneNumber())
                 .createdAt(LocalDateTime.now())
                 .build();
 

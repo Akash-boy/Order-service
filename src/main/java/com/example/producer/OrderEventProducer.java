@@ -1,42 +1,44 @@
 package com.example.producer;
-import com.example.dto.CreateOrderRequest;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import com.example.dto.OrderCreatedEvent;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Component;
 
-import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.kafka.support.SendResult;
-import java.util.concurrent.CompletableFuture;
-@Service
+@Component
+@Slf4j
 public class OrderEventProducer {
-    private static final Logger logger = LoggerFactory.getLogger(OrderEventProducer.class);
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
-    private final String topicName;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final String orderEventsTopic;
 
-    @Autowired
     public OrderEventProducer(
-            KafkaTemplate<String, String> kafkaTemplate,
-            @Value("${spring.kafka.topic.name}") String topicName) {
+            KafkaTemplate<String, Object> kafkaTemplate,
+            @Value("${kafka.topic.order-events:order-events}") String orderEventsTopic) {
         this.kafkaTemplate = kafkaTemplate;
-        this.topicName = topicName;
+        this.orderEventsTopic = orderEventsTopic;
     }
 
-    public void publishOrderCreated(CreateOrderRequest orderJson) {
-        logger.info("Publishing order to topic: {}", topicName);
+    /**
+     * Publish OrderCreated event
+     */
+    public void publishOrderCreated(OrderCreatedEvent event) {
+        log.info("Publishing OrderCreated event for order: {}", event.getOrderId());
+        kafkaTemplate.send(orderEventsTopic, "ORDER_CREATED", event);
+        log.info("OrderCreated event published successfully");
+    }
 
-        CompletableFuture<SendResult<String, String>> future =
-                kafkaTemplate.send(topicName, orderJson.toString());
+    /**
+     * Publish OrderCancelled event
+     */
+    public void publishOrderCancelled(Long orderId) {
+        log.info("Publishing OrderCancelled event for order: {}", orderId);
 
-        future.whenComplete((result, ex) -> {
-            if (ex == null) {
-                logger.info("Message sent successfully to topic: {} with offset: {}",
-                        topicName, result.getRecordMetadata().offset());
-            } else {
-                logger.error("Failed to send message to topic: {}", topicName, ex);
-            }
-        });
+        // Simple event with just orderId
+        String event = String.format("{\"orderId\": %d, \"eventType\": \"ORDER_CANCELLED\"}", orderId);
+        kafkaTemplate.send(orderEventsTopic, "ORDER_CANCELLED", event);
+
+        log.info("OrderCancelled event published successfully");
     }
 }

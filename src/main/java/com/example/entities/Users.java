@@ -20,6 +20,8 @@ public class Users {
     private String password;
     @Column(unique = true, nullable = false)
     private String email;
+    private String phoneNumber;
+    private String address;
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }
