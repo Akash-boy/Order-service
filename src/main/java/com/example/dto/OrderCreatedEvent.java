@@ -1,5 +1,9 @@
 package com.example.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,8 +23,15 @@ public class OrderCreatedEvent {
     private List<OrderItemDto> items;
     private BigDecimal totalAmount;
     private String shippingAddress;
+
+    // Fix 1: Annotate LocalDateTime so Jackson can serialize/deserialize it
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime createdAt;
-    private String eventType = "ORDER_CREATED";
+
+    // Fix 2: Remove inline default value — set it explicitly when building the event
+    // (default values on fields break Lombok's @AllArgsConstructor + @Builder combo)
+    private String eventType;
 
     @Data
     @Builder

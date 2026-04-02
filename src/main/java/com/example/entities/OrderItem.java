@@ -1,5 +1,6 @@
 package com.example.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,17 +21,14 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // REMOVED: @ManyToOne relationship to Product
-    // ADDED: Simple reference fields
+    @Column(nullable = false)
+    private Long productId;       // Reference to Inventory Service product
 
     @Column(nullable = false)
-    private Long productId;  // Reference to Inventory Service product
+    private String productName;   // Snapshot at order time
 
     @Column(nullable = false)
-    private String productName;  // Snapshot at order time
-
-    @Column(nullable = false)
-    private String productSku;  // Snapshot for reference
+    private String productSku;    // Snapshot for reference
 
     @Column(nullable = false)
     private Integer quantity;
@@ -39,9 +37,11 @@ public class OrderItem {
     private BigDecimal priceAtOrder;  // Price when order was created
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal subtotal;  // quantity * priceAtOrder
+    private BigDecimal subtotal;      // quantity * priceAtOrder
 
-    // Relationship to Order (unchanged)
+    // Fix: @JsonBackReference breaks the circular reference loop
+    // Order has @JsonManagedReference on orderItems — this is the "back" side
+    @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;

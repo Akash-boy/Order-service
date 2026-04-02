@@ -1,10 +1,7 @@
 package com.example.service;
 
 import com.example.client.InventoryServiceClient;
-import com.example.dto.CreateOrderRequest;
-import com.example.dto.OrderCreatedEvent;
-import com.example.dto.OrderItemRequest;
-import com.example.dto.ProductAvailabilityResponse;
+import com.example.dto.*;
 import com.example.entities.Order;
 import com.example.entities.OrderItem;
 import com.example.entities.Users;
@@ -12,7 +9,7 @@ import com.example.enums.OrderStatus;
 import com.example.exception.InsufficientStockException;
 import com.example.exception.OrderException;
 import com.example.exception.UserNotFoundException;
-import com.example.producer.OrderEventProducer;
+import com.example.kafka.OrderEventProducer;
 import com.example.repository.OrderRepository;
 import com.example.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -259,5 +256,51 @@ public class OrderService {
                 .createdAt(order.getCreatedAt())
                 .eventType("ORDER_CREATED")
                 .build();
+    }
+
+    public void completeOrder(OrderCompletedRequest request) {
+        log.info("Completing order: {}", request.getOrderId());
+
+        Order order = orderRepository.findById(request.getOrderId())
+                .orElseThrow(() -> new OrderException("Order not found with ID: " + request.getOrderId()));
+
+        if (order.getStatus() != OrderStatus.PENDING) {
+            log.warn("Order {} is not in PENDING status. Current status: {}, cannot complete.",
+                    request.getOrderId(), order.getStatus());
+            return;
+        }
+        order.setStatus(OrderStatus.COMPLETED);
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+            log.info("Order {} marked as COMPLETED", request.getOrderId());
+         orderEventProducer.publishOrderCompleted(request.getOrderId(), request.getUserId());
+
+    }
+
+    public void revertStockForOrder(Long orderId, String reason) {
+        log.info("Reverting stock for order: {} due to reason: {}", orderId, reason);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderException("Order not found with ID: " + orderId));
+
+        if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
+            log.warn("Order {} is not in PAYMENT_PENDING status. Current status: {}, cannot revert stock.",
+                    orderId, order.getStatus());
+            return;
+        }
+
+        // Update order status to CANCELLED
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+        log.info("Order {} marked as CANCELLED due to stock revert", orderId);
+
+        // Publish OrderCancelled event to release stock
+        try {
+            orderEventProducer.publishOrderCancelled(orderId);
+            log.info("OrderCancelled event published for order: {}", orderId);
+        } catch (Exception e) {
+            log.error("Failed to publish OrderCancelled event for stock revert: {}", e.getMessage(), e);
+        }
     }
 }

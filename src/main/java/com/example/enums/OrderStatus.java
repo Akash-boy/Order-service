@@ -6,8 +6,6 @@ public enum OrderStatus {
     INVENTORY_RESERVED, // Inventory reserved, waiting for payment
     PAYMENT_PENDING,   // Payment initiated
     CONFIRMED,         // Payment successful
-    SHIPPED,           // Order shipped
-    DELIVERED,         // Order delivered
+    COMPLETED,         // Order completed
     CANCELLED,         // Order cancelled
-    FAILED             // Order failed
 }
